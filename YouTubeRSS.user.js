@@ -1,8 +1,8 @@
 ﻿// ==UserScript==
-// @name         YouTubeRSS
+// @name         YouTube RSS
 // @namespace    https://greasyfork.org/scripts/32384-youtuberss
-// @version      0.3.0
-// @description  YouTubeRSS user/channel
+// @version      0.3.1
+// @description  add an rss feed link to YouTube pages
 // @author       legalthan.com
 // @homepage https://github.com/GoldenAscending/YouTube-RSS
 // @match        https://www.youtube.com/*
