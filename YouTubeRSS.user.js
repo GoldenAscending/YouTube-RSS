@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         YouTube RSS
 // @namespace    https://greasyfork.org/scripts/32384-youtuberss
-// @version      0.3.1
+// @version      0.3.2
 // @description  add an rss feed link to YouTube pages
 // @author       legalthan.com
 // @homepage https://github.com/GoldenAscending/YouTube-RSS
@@ -30,6 +30,13 @@ https://www.youtube.com/feeds/videos.xml?user=USERNAME
 https://www.youtube.com/channel/UCpVm7bg6pXKo1Pr6k5kxG9A
 //channel rss link
 https://www.youtube.com/feeds/videos.xml?channel_id=CHANNELID
+
+//playlist
+https://www.youtube.com/feeds/videos.xml?playlist_id=xxx
+
+//some old style
+https://www.youtube.com/channel/UCiDJtJKMICpb9B1qf7qjEOA
+
 */
 
 let y2brss_lo; //location
@@ -38,7 +45,7 @@ let y2brss_check_url = function(){
     try
     {
         //当前url
-        y2brss_lo = window.location;
+        y2brss_lo = document.location;
         if(y2brss_lo.href.indexOf('https://www.youtube.com/user/') == 0 || 
         y2brss_lo.href.indexOf('https://www.youtube.com/channel/') == 0 ||
         y2brss_lo.href.indexOf('https://www.youtube.com/watch') == 0)
@@ -56,7 +63,10 @@ let y2brss_check_rss_button = function(){
     try{
 
         //订阅按钮
-        let bfb = document.querySelectorAll("#subscribe-button > ytd-subscribe-button-renderer > paper-button");
+        let bfb =document.querySelectorAll("button[class^='yt-uix-button yt-uix-button-size-default yt-uix-button-subscribe-branded']") 
+        if(bfb.length==0) bfb = document.querySelectorAll("button[class^='yt-uix-button yt-uix-button-size-default yt-uix-button-subscribed-branded']")
+        if(bfb.length==0) bfb = document.querySelectorAll("#subscribe-button > ytd-subscribe-button-renderer > paper-button") ;
+        console.log(bfb);
         if(!bfb)return;
         for (let bfb_s of bfb){
                 if( bfb_s.previousSibling){
@@ -69,29 +79,15 @@ let y2brss_check_rss_button = function(){
                 let rsslink = y2brss_linkrss(); //rss连接
                 let nx = document.createElement("a");
                 bfb_s.parentNode.insertBefore(nx, bfb_s );
-                nx.href="#";
                 nx.style.float="left";
-                nx.style.marginRight="0px";
-                nx.style.marginTop="3px";
-                nx.innerHTML = "<img width='37' height='37' src='data:image/gif;base64,R0lGODlhGAAYAIcAMf+/YP+XAP+aAv+aA/+ZAf+ZAP/AYf+XA/+WAP+VAP+UAP+YAP+bBP+ZAv+XBP+hFP+oJ/+rL/+tNP+tMv+qK/+lH/+eC/+SAP+cB//v1//////+/f/9+f/26P/qzP/Ynv+/X/+kG/+TAP+aAf+cCP/05P///v/+/P/79v/fr/+xOv+YAv/rzf/47P/36//79f/9+//89//ao/+dEP+dCf+dDP+gEf+jGv+rLf+1Rv/EbP/Ynf/u1f/+/v/8+P/++//w1/+jH/+rK//Phv/9+v/rzP+aCP+WAf+RAP+fEv/cpv/Je/+bA//Zn//t0f/szv/kvP/Yn//GcP+sL/+cBv+XAv/WmP/z4v+dDv/x2//qy/+4TP+aBf+aC//w2f+5VP/UlP+bBf/DbP/Wmv+aBP/Kff+iHf/68v+wOv+sLv+lIP+mIf+5Uf/bpP/47/+iG//kv//47v+gE/+QAP+PAP+UAv+xPf/57//BZ//OiP+pKv++XP/Fbv+uM//8+f/bpv+9W/+yP/+rMf/15f/NhP+eE//rzv+wO/+4Tv+1SP/mwv+dC/+oJv+6U/+pKP/Tkf/cqf+hFf+iF/+7Vv+nI//Ri//ZoP/58f+iFv/47f/juf+vOP/dq/+eDP/z4/+3S//px//AYv/nw//15/+eDf+fDv/26f+vNf+hFv+0RP+/Xv/Eaf/Fbf+YBf+YAf/AYwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAGAAYAAcI/gABBBAgYIBBggQKKFzIsACBAAYOFAiAIIGCBAkQLCDAgEGDhgsXOPj4AEIECRMoVLAQ4MIFBAZBFmiwAEMGDRs06OTQwcMHECFEKBgwAuQCEiVwajBxIudSDShSqBCxQkDDmixauHihsyuMGCZ0ypiBwGpDGjVs3MCRQ8cOHic09PDxQwOQIGWNBqCYQISIBkKGuNBwgoiGIkY2MkwQYMGCviIQEDiCJIkSnIaXXGDCsImTJyygRJEy5YgCKlWQWNEAQ8MVLIoLCMiitKsJLVtEcFnQxYsGw19EDFAo4GbOEz5ibAgLBkGYC2I0+NAw5gIZ4rRfgNW5AYbhMiIW/pg5o5NFgIUC0KRRsyYNmzYclLp58xiOzjhyAhQtYHEOHSR1IGHHHb9pgIcCIuShQV16JGCVAAgksQcffSSAAR14aOCHBn8ooAAgBQYylAAJCDKIUoQkUEAhg2lgSAEKHMKaBoiIcN0CWmjAARFxJaIAAoroVMIiCTDSlAaNiMBAAo700INOhj0iFCQ63RFJApKQp8EkSiZACQw9hBVfJUJZotMlmCQgRyY6sWHjCAhowlpcGmyCgAKcEBZHJAh04smTn9g4QABvgKLTC6EowAACoug0CikIlGKKTocowIVECDhwSg6oiGBWKo00koMANamyCiuRBNBKKAEM0ACCEa0uJIJLIix0ARJIuLLAKwEBADs='>";
+                nx.style.marginRight="1px";
+                nx.style.marginTop="0px";
+                nx.innerHTML = "<img width='24' height='24' src='data:image/gif;base64,R0lGODlhGAAYAIcAMf+/YP+XAP+aAv+aA/+ZAf+ZAP/AYf+XA/+WAP+VAP+UAP+YAP+bBP+ZAv+XBP+hFP+oJ/+rL/+tNP+tMv+qK/+lH/+eC/+SAP+cB//v1//////+/f/9+f/26P/qzP/Ynv+/X/+kG/+TAP+aAf+cCP/05P///v/+/P/79v/fr/+xOv+YAv/rzf/47P/36//79f/9+//89//ao/+dEP+dCf+dDP+gEf+jGv+rLf+1Rv/EbP/Ynf/u1f/+/v/8+P/++//w1/+jH/+rK//Phv/9+v/rzP+aCP+WAf+RAP+fEv/cpv/Je/+bA//Zn//t0f/szv/kvP/Yn//GcP+sL/+cBv+XAv/WmP/z4v+dDv/x2//qy/+4TP+aBf+aC//w2f+5VP/UlP+bBf/DbP/Wmv+aBP/Kff+iHf/68v+wOv+sLv+lIP+mIf+5Uf/bpP/47/+iG//kv//47v+gE/+QAP+PAP+UAv+xPf/57//BZ//OiP+pKv++XP/Fbv+uM//8+f/bpv+9W/+yP/+rMf/15f/NhP+eE//rzv+wO/+4Tv+1SP/mwv+dC/+oJv+6U/+pKP/Tkf/cqf+hFf+iF/+7Vv+nI//Ri//ZoP/58f+iFv/47f/juf+vOP/dq/+eDP/z4/+3S//px//AYv/nw//15/+eDf+fDv/26f+vNf+hFv+0RP+/Xv/Eaf/Fbf+YBf+YAf/AYwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAGAAYAAcI/gABBBAgYIBBggQKKFzIsACBAAYOFAiAIIGCBAkQLCDAgEGDhgsXOPj4AEIECRMoVLAQ4MIFBAZBFmiwAEMGDRs06OTQwcMHECFEKBgwAuQCEiVwajBxIudSDShSqBCxQkDDmixauHihsyuMGCZ0ypiBwGpDGjVs3MCRQ8cOHic09PDxQwOQIGWNBqCYQISIBkKGuNBwgoiGIkY2MkwQYMGCviIQEDiCJIkSnIaXXGDCsImTJyygRJEy5YgCKlWQWNEAQ8MVLIoLCMiitKsJLVtEcFnQxYsGw19EDFAo4GbOEz5ibAgLBkGYC2I0+NAw5gIZ4rRfgNW5AYbhMiIW/pg5o5NFgIUC0KRRsyYNmzYclLp58xiOzjhyAhQtYHEOHSR1IGHHHb9pgIcCIuShQV16JGCVAAgksQcffSSAAR14aOCHBn8ooAAgBQYylAAJCDKIUoQkUEAhg2lgSAEKHMKaBoiIcN0CWmjAARFxJaIAAoroVMIiCTDSlAaNiMBAAo700INOhj0iFCQ63RFJApKQp8EkSiZACQw9hBVfJUJZotMlmCQgRyY6sWHjCAhowlpcGmyCgAKcEBZHJAh04smTn9g4QABvgKLTC6EowAACoug0CikIlGKKTocowIVECDhwSg6oiGBWKo00koMANamyCiuRBNBKKAEM0ACCEa0uJIJLIix0ARJIuLLAKwEBADs='>";
                 nx.setAttribute("id","youtube_rss_button_added");
                 nx.setAttribute("href",rsslink);
                 console.log("RSS按钮添加完成");
         }
-        
-        /*
-        //添加按钮
-        let nx = document.createElement("a");
-        bfb.parentNode.insertBefore(nx,bfb);
-        //document.getElementById("roomtitle").parentNode.appendChild(nx,document.getElementById("roomtitle"));
-        nx.href="#";
-        nx.style.float="left";
-        nx.style.marginRight="0px";
-        nx.style.marginTop="3px";
-        nx.innerHTML = "<a href='"+rsslink +"'><img width='37' height='37' src='data:image/gif;base64,R0lGODlhGAAYAIcAMf+/YP+XAP+aAv+aA/+ZAf+ZAP/AYf+XA/+WAP+VAP+UAP+YAP+bBP+ZAv+XBP+hFP+oJ/+rL/+tNP+tMv+qK/+lH/+eC/+SAP+cB//v1//////+/f/9+f/26P/qzP/Ynv+/X/+kG/+TAP+aAf+cCP/05P///v/+/P/79v/fr/+xOv+YAv/rzf/47P/36//79f/9+//89//ao/+dEP+dCf+dDP+gEf+jGv+rLf+1Rv/EbP/Ynf/u1f/+/v/8+P/++//w1/+jH/+rK//Phv/9+v/rzP+aCP+WAf+RAP+fEv/cpv/Je/+bA//Zn//t0f/szv/kvP/Yn//GcP+sL/+cBv+XAv/WmP/z4v+dDv/x2//qy/+4TP+aBf+aC//w2f+5VP/UlP+bBf/DbP/Wmv+aBP/Kff+iHf/68v+wOv+sLv+lIP+mIf+5Uf/bpP/47/+iG//kv//47v+gE/+QAP+PAP+UAv+xPf/57//BZ//OiP+pKv++XP/Fbv+uM//8+f/bpv+9W/+yP/+rMf/15f/NhP+eE//rzv+wO/+4Tv+1SP/mwv+dC/+oJv+6U/+pKP/Tkf/cqf+hFf+iF/+7Vv+nI//Ri//ZoP/58f+iFv/47f/juf+vOP/dq/+eDP/z4/+3S//px//AYv/nw//15/+eDf+fDv/26f+vNf+hFv+0RP+/Xv/Eaf/Fbf+YBf+YAf/AYwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAGAAYAAcI/gABBBAgYIBBggQKKFzIsACBAAYOFAiAIIGCBAkQLCDAgEGDhgsXOPj4AEIECRMoVLAQ4MIFBAZBFmiwAEMGDRs06OTQwcMHECFEKBgwAuQCEiVwajBxIudSDShSqBCxQkDDmixauHihsyuMGCZ0ypiBwGpDGjVs3MCRQ8cOHic09PDxQwOQIGWNBqCYQISIBkKGuNBwgoiGIkY2MkwQYMGCviIQEDiCJIkSnIaXXGDCsImTJyygRJEy5YgCKlWQWNEAQ8MVLIoLCMiitKsJLVtEcFnQxYsGw19EDFAo4GbOEz5ibAgLBkGYC2I0+NAw5gIZ4rRfgNW5AYbhMiIW/pg5o5NFgIUC0KRRsyYNmzYclLp58xiOzjhyAhQtYHEOHSR1IGHHHb9pgIcCIuShQV16JGCVAAgksQcffSSAAR14aOCHBn8ooAAgBQYylAAJCDKIUoQkUEAhg2lgSAEKHMKaBoiIcN0CWmjAARFxJaIAAoroVMIiCTDSlAaNiMBAAo700INOhj0iFCQ63RFJApKQp8EkSiZACQw9hBVfJUJZotMlmCQgRyY6sWHjCAhowlpcGmyCgAKcEBZHJAh04smTn9g4QABvgKLTC6EowAACoug0CikIlGKKTocowIVECDhwSg6oiGBWKo00koMANamyCiuRBNBKKAEM0ACCEa0uJIJLIix0ARJIuLLAKwEBADs='></a>";
-        nx.setAttribute("id","youtube_rss_button_added");
-        console.log("RSS按钮添加完成");
-        */
+
     }catch(e){
         console.log("出错了"+e);
     }
@@ -103,7 +99,12 @@ let y2brss_linkrss = function(){
     let rss_link_generater = y2brss_lo;
     if(y2brss_lo.href.indexOf('https://www.youtube.com/watch') == 0)
     {
-        rss_link_generater = document.querySelector("#owner-name > a").href;
+        if(document.querySelector("#owner-name > a")){
+            rss_link_generater = document.querySelector("#owner-name > a").href;
+        }
+        if(document.querySelector("#watch7-user-header > div > a") ){
+            rss_link_generater = document.querySelector("#watch7-user-header > div > a").href;
+        }
     }
     
     let pattern = /(channel|user)\/(.*?)(?:\/|$)/gi;
