@@ -4,7 +4,7 @@
 // @version      0.4.0
 // @description  add an rss feed link to YouTube pages
 // @author       legalthan.com
-// @homepage https://github.com/GoldenAscending/YouTube-RSS
+// @homepage https://greasyfork.org/scripts/32384-youtube-rss
 // @match        https://www.youtube.com/*
 // @icon https://www.youtube.com/favicon.ico
 // @updateURL https://greasyfork.org/scripts/32384-youtube-rss/code/YouTube%20RSS.user.js
